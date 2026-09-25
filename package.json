@@ -1,0 +1,32 @@
+{
+  "name": "kamaz-dealer",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently --kill-others-on-fail --names API,WEB --prefix-colors blue,green \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:client": "vite",
+    "dev:server": "node --watch backend/server.js",
+    "start": "node backend/server.js",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "latest",
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.1.0",
+    "fast-xml-parser": "^5.11.1",
+    "mongodb": "^6.20.0",
+    "react": "latest",
+    "react-dom": "latest",
+    "vite": "latest",
+    "zod": "^4.1.11"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5"
+  }
+}
