@@ -1,66 +1,66 @@
 # КАМАЗ Дилер
 
-React-интерфейс, Express API и MongoDB для заявок и новостей ПАО «КАМАЗ».
+React, Express API и PostgreSQL для заявок и RSS-новостей КАМАЗ. Требуется Node.js 22.5+.
 
-## Первый запуск
+## Настройка Рег.облака
+
+Если `.env` отсутствует, скопируйте `.env.example`. Уже заполненный `.env` не перезаписывайте.
+
+- `DATABASE_URL` — строка PostgreSQL из панели Рег.облака, без команды `psql`. Для проекта используется база `db1`. Спецсимволы в пароле нужно URL-кодировать.
+- `PGSSLROOTCERT` — путь к корневому сертификату из вкладки «Подключение». В Windows используйте прямые слэши: `certs/reg-cloud-ca.crt`.
+- `PGSSLMODE=verify-full` — TLS с проверкой CA и имени/IP сервера, по умолчанию. Если сертификат не содержит публичный IP, используйте доступное имя хоста из панели, соответствующее сертификату. Также поддерживается `verify-ca`: проверяет CA, но не имя сервера. `disable` предназначен для локальной БД без TLS.
+- `ADMIN_TOKEN` и `IP_HASH_SALT` — длинные случайные значения.
+
+Параметры TLS задавайте этими переменными, а не параметрами `sslmode`/`sslrootcert` в URL.
+MongoDB больше не используется; `MONGODB_URI` и `MONGODB_DATABASE` можно удалить из `.env`.
+Секреты не включаются в frontend-сборку и Git.
+
+Документация: [Рег.облако](https://help.reg.ru/support/servery-vps/oblachnyye-bazy-dannykh/postgresql/), [TLS node-postgres](https://node-postgres.com/features/ssl).
+
+Кластер: `79.174.89.250:15529`, база `db1`, пользователь `user1`. Корневой сертификат сохранён в `certs/reg-cloud-ca.crt`. `.env` и относительный путь сертификата загружаются от корня проекта независимо от папки запуска.
+
+`npm run db:check` проверяет авторизацию, TLS и наличие таблиц без изменения данных. Ошибка `28P01` означает неверный пароль: сохраните новый пароль пользователя в панели и обновите `DATABASE_URL` (например, `@` кодируется как `%40`).
+
+## Запуск
+
+После проверки параметров подключения:
 
 ```powershell
 npm install
-Copy-Item .env.example .env
+npm run db:check
+npm run db:migrate
+npm run dev
+```
+
+`db:migrate` создаёт таблицы и индексы в транзакции, допускает повторный запуск и не удаляет данные. Несовместимая старая схема автоматически не преобразуется.
+Backend сам не создаёт таблицы. Предполагается пустая PostgreSQL, перенос MongoDB не выполняется.
+
+Frontend: `http://localhost:5173`, backend: `http://localhost:3000`.
+Vite перенаправляет `/api` на backend. Проверка БД: `GET /api/health`.
+
+Для собранного сайта:
+
+```powershell
 npm run build
 npm start
 ```
 
-Создайте кластер и пользователя MongoDB Atlas, скопируйте строку подключения в
-`MONGODB_URI`, затем замените `ADMIN_TOKEN` и `IP_HASH_SALT` длинными случайными
-строками. Файл `.env` не включается в сборку и Git.
+Node.js раздаёт сайт и API на одном порту. Для размещения нужен постоянный Node.js-процесс, например VPS или App Platform; статического хостинга недостаточно. На сервере задайте переменные окружения и путь к загруженному сертификату. Если настроены ограничения сети Рег.облака, разрешите IP backend.
 
-После запуска сайт и API доступны на `http://localhost:3000`. Для разработки
-запустите frontend и backend одной командой:
+## Заявки
 
-```powershell
-npm run dev
-```
-
-Vite откроется на `http://localhost:5173` и перенаправит запросы `/api` на
-Express-сервер. Отдельно процессы можно запускать командами `npm run dev:client`
-и `npm run dev:server`.
-
-## Где хранятся заявки
-
-Заявки сохраняются в базе `kamaz`, коллекции `applications` в MongoDB. Имя базы
-можно изменить переменной `MONGODB_DATABASE`. Посмотреть документы можно через
-MongoDB Atlas Data Explorer или через защищённый API проекта.
-
-Получить последние заявки можно защищённым запросом:
+Таблица `applications`, новые идентификаторы UUID. Формат API сохранён, включая `applicationId`, `branchId`, `createdAt`.
 
 ```powershell
 $headers = @{ Authorization = "Bearer значение-ADMIN_TOKEN" }
 Invoke-RestMethod http://localhost:3000/api/applications -Headers $headers
-```
-
-Изменить статус заявки:
-
-```powershell
-$headers = @{ Authorization = "Bearer значение-ADMIN_TOKEN" }
 $body = @{ status = "processing" } | ConvertTo-Json
 Invoke-RestMethod http://localhost:3000/api/applications/ID -Method Patch -Headers $headers -ContentType "application/json" -Body $body
 ```
 
-Допустимые статусы: `new`, `processing`, `completed`, `rejected`.
+Допустимые статусы: `new`, `processing`, `completed`, `rejected`. Чтение заявок и изменение статуса требуют `ADMIN_TOKEN`.
 
-## Новости КАМАЗ
+## Новости
 
-Express загружает официальный RSS `http://www.kamaz.ru/press/releases/rss/` при
-запуске и затем обновляет его каждые 30 минут. Записи сохраняются без дублей в
-базе `kamaz`, коллекции `news`, а React получает их через `GET /api/news`.
-
-Адрес ленты и период обновления можно изменить в `.env`:
-
-```dotenv
-KAMAZ_RSS_URL=http://www.kamaz.ru/press/releases/rss/
-RSS_REFRESH_MINUTES=30
-```
-
-Если источник временно недоступен, сайт продолжит показывать последние новости,
-которые уже сохранены в MongoDB.
+При запуске и каждые 30 минут backend загружает RSS КАМАЗ в таблицу `news`. Повторные загрузки обновляют записи по уникальному `rssKey` без дублей. Интерфейс получает новости через `GET /api/news`.
+Если RSS недоступен, остаются ранее сохранённые новости. Адрес и период задаются в `KAMAZ_RSS_URL` и `RSS_REFRESH_MINUTES`.
