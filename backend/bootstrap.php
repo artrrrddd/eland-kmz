@@ -31,40 +31,46 @@ function db(): PDO
 {
     static $pdo;
     if ($pdo instanceof PDO) return $pdo;
-    $url = parse_url(env('DATABASE_URL'));
-    if (!$url || !in_array($url['scheme'] ?? '', ['postgres', 'postgresql'], true) || empty($url['host']) || empty($url['path'])) {
-        throw new RuntimeException('Set a valid PostgreSQL DATABASE_URL.');
+    if (!in_array('mysql', PDO::getAvailableDrivers(), true)) throw new RuntimeException('Enable pdo_mysql in php.ini.');
+    $host = env('DB_HOST', '127.0.0.1');
+    $port = env('DB_PORT', '3306');
+    $name = env('DB_DATABASE');
+    if ($name === '' || !ctype_digit($port) || (int) $port < 1 || (int) $port > 65535) throw new RuntimeException('Invalid MySQL database settings.');
+    foreach ([$host, $name] as $value) {
+        if (preg_match('/[;\x00\r\n]/', $value)) throw new RuntimeException('Invalid MySQL DSN value.');
     }
-    if (!empty($url['query'])) throw new RuntimeException('Use PGSSLMODE and PGSSLROOTCERT instead of URL parameters.');
-    $mode = env('PGSSLMODE', 'verify-full');
-    if (!in_array($mode, ['verify-full', 'verify-ca', 'disable'], true)) throw new RuntimeException('Invalid PGSSLMODE.');
-    $params = ['host' => $url['host'], 'port' => (string) ($url['port'] ?? 5432), 'dbname' => rawurldecode(substr($url['path'], 1)), 'sslmode' => $mode, 'connect_timeout' => '15'];
-    if ($mode !== 'disable') {
-        $cert = env('PGSSLROOTCERT');
-        if ($cert === '') throw new RuntimeException('PGSSLROOTCERT is required for TLS.');
-        if (!preg_match('~^(?:[A-Za-z]:[\\\\/]|/)~', $cert)) $cert = PROJECT_ROOT . '/' . $cert;
-        $cert = realpath($cert);
-        if ($cert === false) throw new RuntimeException('PostgreSQL CA certificate not found.');
-        $params['sslrootcert'] = str_replace('\\', '/', $cert);
-        // libpq on Windows can fail on absolute Unicode paths. A relative path
-        // avoids that issue when the certificate is beneath the working directory.
-        $cwd = str_replace('\\', '/', getcwd()) . '/';
-        if (PHP_OS_FAMILY === 'Windows' && str_starts_with($params['sslrootcert'], $cwd)) {
-            $params['sslrootcert'] = substr($params['sslrootcert'], strlen($cwd));
-        }
-    }
-    $dsn = 'pgsql:';
-    foreach ($params as $key => $value) {
-        if (str_contains($value, ';') || str_contains($value, "\0")) throw new RuntimeException('Invalid DSN value.');
-        $dsn .= $key . "='" . str_replace(['\\', "'"], ['\\\\', "\\'"], $value) . "' ";
-    }
-    $pdo = new PDO($dsn, rawurldecode($url['user'] ?? ''), rawurldecode($url['pass'] ?? ''), [
+    $options = [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_EMULATE_PREPARES => false,
-    ]);
-    $pdo->exec("SET statement_timeout = '15s'");
-    $pdo->exec("SET TIME ZONE 'UTC'");
+        PDO::ATTR_TIMEOUT => 15,
+        PDO::MYSQL_ATTR_FOUND_ROWS => true,
+        PDO::MYSQL_ATTR_MULTI_STATEMENTS => false,
+    ];
+    $mode = env('DB_SSL_MODE', 'disable');
+    if (!in_array($mode, ['disable', 'require', 'verify'], true)) throw new RuntimeException('Invalid DB_SSL_MODE.');
+    if ($mode !== 'disable') {
+        if (!extension_loaded('openssl')) throw new RuntimeException('Enable openssl in php.ini for MySQL TLS.');
+        $ca = env('DB_SSL_CA');
+        if ($mode === 'verify' && $ca === '') throw new RuntimeException('DB_SSL_CA is required in verify mode.');
+        if ($ca !== '') {
+            if (!preg_match('~^(?:[A-Za-z]:[\\\\/]|/)~', $ca)) $ca = PROJECT_ROOT . '/' . $ca;
+            $ca = realpath($ca);
+            if ($ca === false) throw new RuntimeException('MySQL CA certificate not found.');
+            $options[PDO::MYSQL_ATTR_SSL_CA] = $ca;
+        } else {
+            $options[PDO::MYSQL_ATTR_SSL_CA] = null;
+        }
+        $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = $mode === 'verify';
+        $options[PDO::MYSQL_ATTR_SSL_CIPHER] = 'DEFAULT';
+    }
+    $connection = new PDO('mysql:host=' . $host . ';port=' . $port . ';dbname=' . $name . ';charset=utf8mb4', env('DB_USERNAME'), env('DB_PASSWORD'), $options);
+    $connection->exec("SET time_zone = '+00:00'");
+    if ($mode !== 'disable') {
+        $ssl = $connection->query("SHOW SESSION STATUS LIKE 'Ssl_cipher'")->fetch();
+        if (empty($ssl['Value'])) throw new RuntimeException('MySQL TLS connection is required.');
+    }
+    $pdo = $connection;
     return $pdo;
 }
 

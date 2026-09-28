@@ -36,18 +36,33 @@ function applicationIpHash(): string
     return hash('sha256', ($_SERVER['REMOTE_ADDR'] ?? 'unknown') . ':' . $salt);
 }
 
+function consumeApplicationLimit(PDO $pdo, string $hash): array
+{
+    // Keep the upsert and read under the same InnoDB row lock.
+    $pdo->beginTransaction();
+    try {
+        $stmt = $pdo->prepare('INSERT INTO api_rate_limits (`key`, hits, expires_at)
+            VALUES (:key, 1, NOW(3) + INTERVAL 15 MINUTE)
+            ON DUPLICATE KEY UPDATE
+              hits = IF(expires_at <= NOW(3), 1, hits + 1),
+              expires_at = IF(expires_at <= NOW(3), NOW(3) + INTERVAL 15 MINUTE, expires_at)');
+        $stmt->execute(['key' => $hash]);
+        $stmt = $pdo->prepare('SELECT hits, GREATEST(1, CEIL(TIMESTAMPDIFF(MICROSECOND, NOW(3), expires_at) / 1000000)) AS retry
+            FROM api_rate_limits WHERE `key` = :key FOR UPDATE');
+        $stmt->execute(['key' => $hash]);
+        $result = $stmt->fetch();
+        $pdo->commit();
+    } catch (Throwable $error) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        throw $error;
+    }
+    $pdo->exec('DELETE FROM api_rate_limits WHERE expires_at < NOW(3) LIMIT 1000');
+    return $result;
+}
+
 function limitApplications(PDO $pdo, string $hash): void
 {
-    // Atomic shared counter: concurrent PHP workers cannot bypass the limit.
-    $stmt = $pdo->prepare('INSERT INTO api_rate_limits (key, hits, expires_at)
-        VALUES (:key, 1, NOW() + INTERVAL \'15 minutes\')
-        ON CONFLICT (key) DO UPDATE SET
-          hits = CASE WHEN api_rate_limits.expires_at <= NOW() THEN 1 ELSE api_rate_limits.hits + 1 END,
-          expires_at = CASE WHEN api_rate_limits.expires_at <= NOW() THEN NOW() + INTERVAL \'15 minutes\' ELSE api_rate_limits.expires_at END
-        RETURNING hits, GREATEST(1, CEIL(EXTRACT(EPOCH FROM expires_at - NOW()))) AS retry');
-    $stmt->execute(['key' => $hash]);
-    $result = $stmt->fetch();
-    $pdo->exec('DELETE FROM api_rate_limits WHERE expires_at < NOW()');
+    $result = consumeApplicationLimit($pdo, $hash);
     if ((int) $result['hits'] > 5) {
         header('Retry-After: ' . (int) $result['retry']);
         jsonResponse(['ok' => false, 'message' => 'Слишком много заявок. Попробуйте позднее.'], 429);

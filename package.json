@@ -13,7 +13,8 @@
     "db:migrate": "node scripts/php.mjs backend/console.php db:migrate",
     "db:check": "node scripts/php.mjs backend/console.php db:check",
     "news:refresh": "node scripts/php.mjs backend/console.php news:refresh",
-    "test:backend": "node scripts/php.mjs backend/tests.php"
+    "test:backend": "node scripts/php.mjs backend/tests.php",
+    "test:mysql": "node scripts/php.mjs backend/tests-mysql.php"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",

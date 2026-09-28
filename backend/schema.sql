@@ -1,68 +1,41 @@
 CREATE TABLE IF NOT EXISTS applications (
-  id UUID PRIMARY KEY,
-  type VARCHAR(30) NOT NULL
-    CHECK (
-      type IN (
-        'question',
-        'callback',
-        'test_drive',
-        'service',
-        'commercial_offer'
-      )
-    ),
+  id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY,
+  type ENUM('question', 'callback', 'test_drive', 'service', 'commercial_offer') NOT NULL,
   name VARCHAR(100) NOT NULL,
   phone VARCHAR(30) NOT NULL,
-  "phoneNormalized" VARCHAR(30) NOT NULL,
+  `phoneNormalized` VARCHAR(30) NOT NULL,
   model VARCHAR(100),
   vehicle VARCHAR(100),
   message VARCHAR(2000),
-  "branchId" INTEGER NOT NULL DEFAULT 0
-    CHECK ("branchId" BETWEEN 0 AND 2),
-  status VARCHAR(30) NOT NULL DEFAULT 'new'
-    CHECK (
-      status IN (
-        'new',
-        'processing',
-        'completed',
-        'rejected'
-      )
-    ),
-  "managerId" UUID,
+  `branchId` INT NOT NULL DEFAULT 0 CHECK (`branchId` BETWEEN 0 AND 2),
+  status ENUM('new', 'processing', 'completed', 'rejected') NOT NULL DEFAULT 'new',
+  `managerId` CHAR(36) CHARACTER SET ascii COLLATE ascii_bin,
   consent BOOLEAN NOT NULL DEFAULT TRUE,
-  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  "ipHash" VARCHAR(64) NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS applications_created_at_idx
-  ON applications ("createdAt" DESC);
-
-CREATE INDEX IF NOT EXISTS applications_status_idx
-  ON applications (status);
-
-CREATE INDEX IF NOT EXISTS applications_phone_normalized_idx
-  ON applications ("phoneNormalized");
+  `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updatedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `ipHash` CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  INDEX applications_created_at_idx (`createdAt`),
+  INDEX applications_status_idx (status),
+  INDEX applications_phone_normalized_idx (`phoneNormalized`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS news (
-  id UUID PRIMARY KEY,
-  "rssKey" TEXT NOT NULL UNIQUE,
+  id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY,
+  `rssKey` TEXT NOT NULL,
+  `rssKeyHash` CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL UNIQUE,
   title TEXT NOT NULL,
   link TEXT NOT NULL,
   description VARCHAR(500) NOT NULL DEFAULT '',
-  "publishedAt" TIMESTAMPTZ NOT NULL,
-  "fetchedAt" TIMESTAMPTZ NOT NULL,
-  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  source VARCHAR(150) NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS news_published_at_idx
-  ON news ("publishedAt" DESC);
+  `publishedAt` DATETIME(3) NOT NULL,
+  `fetchedAt` DATETIME(3) NOT NULL,
+  `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  source VARCHAR(150) NOT NULL,
+  INDEX news_published_at_idx (`publishedAt`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS api_rate_limits (
-  key VARCHAR(64) PRIMARY KEY,
+  `key` CHAR(64) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY,
   hits BIGINT NOT NULL,
-  expires_at TIMESTAMPTZ NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS api_rate_limits_expires_idx
-  ON api_rate_limits (expires_at);
+  expires_at DATETIME(3) NOT NULL,
+  INDEX api_rate_limits_expires_idx (expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

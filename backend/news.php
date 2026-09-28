@@ -35,7 +35,7 @@ function parseNews(string $xml): array
             try { $published = new DateTimeImmutable($date); } catch (Exception $error) { continue; }
             $result[] = ['key' => $guid, 'title' => $title, 'link' => $link,
                 'description' => mb_substr(newsText($get('description') ?: ($get('summary') ?: $get('content'))), 0, 500, 'UTF-8'),
-                'published' => $published->format(DateTimeInterface::ATOM)];
+                'published' => $published->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s.v')];
         }
         return $result;
     } finally {
@@ -67,14 +67,20 @@ function refreshNews(PDO $pdo): int
     $error = curl_error($curl);
     curl_close($curl);
     if ($ok === false || $status < 200 || $status >= 300) throw new RuntimeException('RSS download failed, HTTP ' . $status . ($error !== '' ? ': ' . $error : ''));
-    $items = parseNews($xml);
+    return storeNews($pdo, parseNews($xml));
+}
+
+function storeNews(PDO $pdo, array $items): int
+{
     $pdo->beginTransaction();
     try {
-        $stmt = $pdo->prepare('INSERT INTO news (id, "rssKey", title, link, description, "publishedAt", "fetchedAt", "createdAt", source)
-            VALUES (:id, :key, :title, :link, :description, :published, NOW(), NOW(), :source)
-            ON CONFLICT ("rssKey") DO UPDATE SET title = EXCLUDED.title, link = EXCLUDED.link,
-            description = EXCLUDED.description, "publishedAt" = EXCLUDED."publishedAt", "fetchedAt" = EXCLUDED."fetchedAt", source = EXCLUDED.source');
-        foreach ($items as $item) $stmt->execute(['id' => uuid(), 'source' => 'ПАО «КАМАЗ»'] + $item);
+        $stmt = $pdo->prepare('INSERT INTO news (id, `rssKey`, `rssKeyHash`, title, link, description, `publishedAt`, `fetchedAt`, `createdAt`, source)
+            VALUES (:id, :key, :keyHash, :title, :link, :description, :published, NOW(3), NOW(3), :source)
+            ON DUPLICATE KEY UPDATE title = :newTitle, link = :newLink,
+            description = :newDescription, `publishedAt` = :newPublished, `fetchedAt` = NOW(3), source = :newSource');
+        foreach ($items as $item) $stmt->execute(['id' => uuid(), 'source' => 'ПАО «КАМАЗ»',
+            'keyHash' => hash('sha256', $item['key']), 'newTitle' => $item['title'], 'newLink' => $item['link'],
+            'newDescription' => $item['description'], 'newPublished' => $item['published'], 'newSource' => 'ПАО «КАМАЗ»'] + $item);
         $pdo->commit();
     } catch (Throwable $error) {
         $pdo->rollBack();
