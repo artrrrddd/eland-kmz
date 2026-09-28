@@ -57,3 +57,12 @@ CREATE TABLE IF NOT EXISTS news (
 
 CREATE INDEX IF NOT EXISTS news_published_at_idx
   ON news ("publishedAt" DESC);
+
+CREATE TABLE IF NOT EXISTS api_rate_limits (
+  key VARCHAR(64) PRIMARY KEY,
+  hits BIGINT NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS api_rate_limits_expires_idx
+  ON api_rate_limits (expires_at);

@@ -1,66 +1,106 @@
-# КАМАЗ Дилер
+﻿# КАМАЗ Дилер
 
-React, Express API и PostgreSQL для заявок и RSS-новостей КАМАЗ. Требуется Node.js 22.5+.
+React + PHP API + PostgreSQL. Node.js нужен только на компьютере разработчика для Vite и сборки React. На хостинге постоянный Node.js-процесс не нужен.
 
-## Настройка Рег.облака
+## Требования
 
-Если `.env` отсутствует, скопируйте `.env.example`. Уже заполненный `.env` не перезаписывайте.
+- PHP 8.2+ с расширениями PDO/pdo_pgsql, mbstring, curl, SimpleXML.
+- PostgreSQL (локальный либо внешний, например Рег.облако).
+- Apache 2.4 с mod_rewrite и разрешёнными .htaccess, либо совместимый LiteSpeed.
+- Cron для обновления новостей. Хостинг должен разрешать исходящие подключения к вашей PostgreSQL и RSS.
 
-- `DATABASE_URL` — строка PostgreSQL из панели Рег.облака, без команды `psql`. Для проекта используется база `db1`. Спецсимволы в пароле нужно URL-кодировать.
-- `PGSSLROOTCERT` — путь к корневому сертификату из вкладки «Подключение». В Windows используйте прямые слэши: `certs/reg-cloud-ca.crt`.
-- `PGSSLMODE=verify-full` — TLS с проверкой CA и имени/IP сервера, по умолчанию. Если сертификат не содержит публичный IP, используйте доступное имя хоста из панели, соответствующее сертификату. Также поддерживается `verify-ca`: проверяет CA, но не имя сервера. `disable` предназначен для локальной БД без TLS.
-- `ADMIN_TOKEN` и `IP_HASH_SALT` — длинные случайные значения.
+## Конфигурация
 
-Параметры TLS задавайте этими переменными, а не параметрами `sslmode`/`sslrootcert` в URL.
-MongoDB больше не используется; `MONGODB_URI` и `MONGODB_DATABASE` можно удалить из `.env`.
-Секреты не включаются в frontend-сборку и Git.
+Скопируйте `.env.example` в `.env`, если файла ещё нет. Существующий `.env` сохранён.
 
-Документация: [Рег.облако](https://help.reg.ru/support/servery-vps/oblachnyye-bazy-dannykh/postgresql/), [TLS node-postgres](https://node-postgres.com/features/ssl).
+- `DATABASE_URL`: `postgresql://USER:PASSWORD@HOST:PORT/DATABASE`. Спецсимволы логина и пароля URL-кодируйте. Параметры TLS в URL не добавляйте.
+- `PGSSLMODE`: `verify-full` (по умолчанию), `verify-ca` или `disable` для локальной БД без TLS.
+- `PGSSLROOTCERT`: путь к CA-сертификату относительно корня проекта либо абсолютный путь. Для TLS обязателен. В Windows используйте прямые слэши.
+- `ADMIN_TOKEN`, `IP_HASH_SALT`: длинные случайные секреты. Не используйте префикс `VITE_` для секретов.
+- `KAMAZ_RSS_URL`: источник RSS. Интервал обновления теперь задаётся расписанием cron, а не `RSS_REFRESH_MINUTES`.
 
-Кластер: `79.174.89.250:15529`, база `db1`, пользователь `user1`. Корневой сертификат сохранён в `certs/reg-cloud-ca.crt`. `.env` и относительный путь сертификата загружаются от корня проекта независимо от папки запуска.
+Переменные окружения имеют приоритет над `.env`. Поддерживаются простые строки KEY=value, значения в одинарных/двойных кавычках; подстановка переменных не выполняется.
 
-`npm run db:check` проверяет авторизацию, TLS и наличие таблиц без изменения данных. Ошибка `28P01` означает неверный пароль: сохраните новый пароль пользователя в панели и обновите `DATABASE_URL` (например, `@` кодируется как `%40`).
+TLS сохраняет прежнюю проверку сертификата. Для `verify-full` имя/IP сервера должно соответствовать сертификату. Подробнее: [PDO PostgreSQL](https://www.php.net/manual/en/ref.pdo-pgsql.connection.php).
 
-## Запуск
+## Локальная разработка
 
-После проверки параметров подключения:
+Npm-команды автоматически используют переносимый PHP из `tmp/php-runtime/php.exe` в Windows, если он доступен. Иначе используется `php` из PATH. Можно явно выбрать исполняемый файл через переменную `PHP_BINARY`. Переносимый PHP не хранится в Git; на новом компьютере установите PHP и включите перечисленные расширения в php.ini.
 
-```powershell
+В Windows библиотека PostgreSQL может не открыть CA по пути с кириллицей. В таком случае разместите сертификат, например, в `C:/certs/reg-cloud-ca.crt` и укажите этот абсолютный путь в `PGSSLROOTCERT`.
+
+```sh
 npm install
 npm run db:check
 npm run db:migrate
+npm run news:refresh
 npm run dev
 ```
 
-`db:migrate` создаёт таблицы и индексы в транзакции, допускает повторный запуск и не удаляет данные. Несовместимая старая схема автоматически не преобразуется.
-Backend сам не создаёт таблицы. Предполагается пустая PostgreSQL, перенос MongoDB не выполняется.
+React: http://localhost:5173, PHP API: http://localhost:3000. Vite проксирует `/api` без изменения frontend.
 
-Frontend: `http://localhost:5173`, backend: `http://localhost:3000`.
-Vite перенаправляет `/api` на backend. Проверка БД: `GET /api/health`.
-
-Для собранного сайта:
-
-```powershell
+```sh
+npm run test:backend
 npm run build
 npm start
 ```
 
-Node.js раздаёт сайт и API на одном порту. Для размещения нужен постоянный Node.js-процесс, например VPS или App Platform; статического хостинга недостаточно. На сервере задайте переменные окружения и путь к загруженному сертификату. Если настроены ограничения сети Рег.облака, разрешите IP backend.
+`npm start` предназначен только для локальной проверки собранного сайта. Встроенный [PHP-сервер](https://www.php.net/manual/en/features.commandline.webserver.php) не используется для публичного хостинга. `npm run preview` показывает только frontend без PHP API.
 
-## Заявки
+## Размещение на shared-хостинге
 
-Таблица `applications`, новые идентификаторы UUID. Формат API сохранён, включая `applicationId`, `branchId`, `createdAt`.
+Соберите frontend локально: `npm run build`. Пример структуры на сервере:
 
-```powershell
-$headers = @{ Authorization = "Bearer значение-ADMIN_TOKEN" }
-Invoke-RestMethod http://localhost:3000/api/applications -Headers $headers
-$body = @{ status = "processing" } | ConvertTo-Json
-Invoke-RestMethod http://localhost:3000/api/applications/ID -Method Patch -Headers $headers -ContentType "application/json" -Body $body
+```text
+/home/account/kamaz/
+  .env
+  backend/
+    bootstrap.php
+    applications.php
+    api.php
+    news.php
+    console.php
+    schema.sql
+  certs/
+    reg-cloud-ca.crt
+  public_html/            <- корень сайта в панели хостинга
+    .htaccess
+    index.html
+    assets/
+    api/
+      index.php
 ```
 
-Допустимые статусы: `new`, `processing`, `completed`, `rejected`. Чтение заявок и изменение статуса требуют `ADMIN_TOKEN`.
+1. Загрузите содержимое `dist/` (включая скрытый `.htaccess`) в `public_html/`.
+2. Папки `backend/`, `certs/` и `.env` разместите на уровень выше `public_html/`. Входной `api/index.php` ожидает именно эту структуру. Не загружайте весь репозиторий в публичный корень.
+3. Заполните `.env`, включите PHP-расширения в панели. Разрешите IP хостинга в настройках внешней PostgreSQL, если там используется список разрешённых адресов.
+4. Из приватного корня проекта выполните `php backend/console.php db:check` и `php backend/console.php db:migrate`. Если SSH отсутствует, импортируйте `backend/schema.sql` через панель управления PostgreSQL. Скрипты миграции не публикуются как HTTP endpoints.
+5. Выполните `php backend/console.php news:refresh` и добавьте cron каждые 30 минут:
 
-## Новости
+```cron
+*/30 * * * * /usr/bin/php /home/account/kamaz/backend/console.php news:refresh >> /home/account/kamaz/news-cron.log 2>&1
+```
 
-При запуске и каждые 30 минут backend загружает RSS КАМАЗ в таблицу `news`. Повторные загрузки обновляют записи по уникальному `rssKey` без дублей. Интерфейс получает новости через `GET /api/news`.
-Если RSS недоступен, остаются ранее сохранённые новости. Адрес и период задаются в `KAMAZ_RSS_URL` и `RSS_REFRESH_MINUTES`.
+Уточните путь к PHP у хостинга. Для первого импорта без SSH можно временно запустить ту же команду через планировщик панели.
+
+6. Проверьте `/api/health`, `/api/news` и отправку формы. `/api/health` проверяет соединение; наличие таблиц проверяет `db:check`.
+
+Для хостинга с фиксированным `public_html` приватные файлы размещаются в его родительском каталоге. Если это запрещено, потребуется адаптация пути в `api/index.php` к доступной приватной папке. Сайт рассчитан на корень домена, не подпапку.
+
+## API и данные
+
+Существующие таблицы и данные `applications` и `news` сохранены. Миграция повторяемая, выполняется в транзакции и добавляет таблицу `api_rate_limits`; выполните её и для существующей БД. Старую несовместимую схему скрипт автоматически не преобразует.
+
+| Метод | URL | Назначение |
+| --- | --- | --- |
+| GET | `/api/health` | Проверка подключения |
+| GET | `/api/news?limit=6` | Новости, максимум 20 |
+| POST | `/api/applications` | Создание заявки |
+| GET | `/api/applications?limit=50&offset=0` | Список заявок, Bearer ADMIN_TOKEN |
+| PATCH | `/api/applications/UUID` | Изменение статуса, Bearer ADMIN_TOKEN |
+
+POST/PATCH принимают JSON до 32 КБ. Заявка возвращает `{ "ok": true, "applicationId": "UUID" }` с HTTP 201. Ошибки формы — HTTP 400, `message` и `fields`. Сохранены типы заявок, согласие, honeypot, проверка телефона, обязательные модель/VIN в соответствующих формах. Статусы: `new`, `processing`, `completed`, `rejected`.
+
+Лимит — 5 попыток отправки формы за 15 минут с одного IP; HTTP 429 содержит Retry-After. Счётчики общие для PHP workers и хранятся в PostgreSQL, просроченные удаляются при запросах. IP хранится только в виде хеша с солью. Используется REMOTE_ADDR; если перед хостингом стоит CDN/proxy, настройте восстановление реального IP доверенным модулем веб-сервера. Произвольный X-Forwarded-For не принимается.
+
+RSS/Atom обновляется через cron с upsert по rssKey. При ошибке загрузки сохраняются старые новости. Публичный API читает только базу, не запускает импорт при запросе посетителя.

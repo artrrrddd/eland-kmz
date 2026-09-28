@@ -5,3 +5,5 @@ backend/data/
 *.db
 *.db-shm
 *.db-wal
+tmp/php-runtime/
+tmp/php-runtime.zip

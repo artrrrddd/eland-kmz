@@ -1,0 +1,9 @@
+Options -Indexes -MultiViews
+DirectoryIndex index.html
+RewriteEngine On
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+RewriteRule (^|/)\. - [F,L]
+RewriteRule ^api(?:/|$) api/index.php [END,QSA]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.html [END]

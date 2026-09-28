@@ -6,24 +6,20 @@
   "scripts": {
     "dev": "concurrently --kill-others-on-fail --names API,WEB --prefix-colors blue,green \"npm:dev:server\" \"npm:dev:client\"",
     "dev:client": "vite",
-    "dev:server": "node --watch backend/server.js",
-    "start": "node backend/server.js",
+    "dev:server": "node scripts/php.mjs -S localhost:3000 -t public backend/router.php",
+    "start": "node scripts/php.mjs -S localhost:3000 -t dist backend/router.php",
     "build": "vite build",
     "preview": "vite preview",
-    "db:migrate": "node backend/migrate.js",
-    "db:check": "node backend/check-database.js"
+    "db:migrate": "node scripts/php.mjs backend/console.php db:migrate",
+    "db:check": "node scripts/php.mjs backend/console.php db:check",
+    "news:refresh": "node scripts/php.mjs backend/console.php news:refresh",
+    "test:backend": "node scripts/php.mjs backend/tests.php"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
-    "dotenv": "^17.2.2",
-    "express": "^5.1.0",
-    "express-rate-limit": "^8.1.0",
-    "fast-xml-parser": "^5.11.1",
-    "pg": "^8.23.0",
     "react": "latest",
     "react-dom": "latest",
-    "vite": "latest",
-    "zod": "^4.1.11"
+    "vite": "latest"
   },
   "engines": {
     "node": ">=22.5.0"
