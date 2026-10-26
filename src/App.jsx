@@ -2,21 +2,82 @@ import { useEffect, useMemo, useState } from 'react';
 
 const slides = [
   {
-    tag: 'Акция до 31 октября',
-    title: 'Магистральный тягач КАМАЗ-54901 в лизинг от 0% аванса',
-    text: 'Программа «Лизинг от производителя» для юридических лиц и ИП.',
+    image: '/images/slider-baz.jpg',
+    alt: 'БАЗ — для дорог и тяжелого бездорожья. Гарантия 24 месяца или 150 000 пробега, 5 видов кабин, управление всеми осями и независимая подвеска.',
   },
   {
-    tag: 'Сервис',
-    title: 'Сезонное ТО со скидкой 15% на оригинальные запчасти',
-    text: 'Подготовьте технику к зиме в сертифицированном сервисном центре КАМАЗ.',
-  },
-  {
-    tag: 'Спецтехника',
-    title: 'Самосвалы и шасси КАМАЗ в наличии на складе',
-    text: 'Более 40 единиц техники готовы к отгрузке. Трейд-ин и кредитование.',
+    image: '/images/slider-kamaz.jpg',
+    alt: 'Теперь с нами КАМАЗ — продажа, запчасти, сервис.',
   },
 ];
+
+const certificates = [
+  {
+    image: '/images/eland-2026-033.png',
+    pdf: '/documents/eland-2026-033.pdf',
+    title: 'ООО «Эланд», Иркутск — 2S автомобили',
+  },
+  {
+    image: '/images/kamaz-dealer.png',
+    pdf: '/documents/kamaz-dealer.pdf',
+    title: 'ОП «ИлимСкан», Усть-Илимск — 2S запасные части',
+  },
+];
+
+function CertificateSlider() {
+  const [current, setCurrent] = useState(0);
+  const changeSlide = (offset) =>
+    setCurrent((value) => (value + offset + certificates.length) % certificates.length);
+
+  return (
+    <div
+      className="certificate-slider"
+      role="region"
+      aria-label="Свидетельства официального дилера КАМАЗ"
+      aria-roledescription="карусель"
+      onKeyDown={(event) => {
+        if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+          event.preventDefault();
+          changeSlide(event.key === 'ArrowLeft' ? -1 : 1);
+        }
+      }}
+    >
+      {certificates.map((certificate, index) => (
+        <a
+          key={certificate.pdf}
+          className="certificate-slide"
+          href={certificate.pdf}
+          target="_blank"
+          rel="noopener noreferrer"
+          hidden={index !== current}
+          aria-label={`${certificate.title}. Открыть свидетельство в PDF`}
+        >
+          <img src={certificate.image} alt={`Свидетельство КАМАЗ: ${certificate.title}`} width="843" height="595" loading="lazy" />
+        </a>
+      ))}
+      <div className="certificate-caption" aria-live="polite" aria-atomic="true">
+        <strong>{certificates[current].title}</strong>
+        <span>Нажмите на свидетельство, чтобы открыть PDF</span>
+      </div>
+      <div className="certificate-controls">
+        <button type="button" onClick={() => changeSlide(-1)} aria-label="Предыдущее свидетельство">←</button>
+        <div className="certificate-dots" aria-label="Выбор свидетельства">
+          {certificates.map((certificate, index) => (
+            <button
+              type="button"
+              key={certificate.pdf}
+              onClick={() => setCurrent(index)}
+              aria-label={`Показать свидетельство ${index + 1}: ${certificate.title}`}
+              aria-current={index === current ? 'true' : undefined}
+            />
+          ))}
+        </div>
+        <span>{current + 1} / {certificates.length}</span>
+        <button type="button" onClick={() => changeSlide(1)} aria-label="Следующее свидетельство">→</button>
+      </div>
+    </div>
+  );
+}
 
 const catalogs = [
   [
@@ -104,7 +165,7 @@ function App() {
   const [newsState, setNewsState] = useState('loading');
 
   const showVehicles = dealerStatus === '3S' || dealerStatus === '2S автотехника';
-  const showParts = ['3S', '2S запчасти', 'Дистрибьютор'].includes(dealerStatus);
+  const showParts = true;
   const showService = dealerStatus !== 'Дистрибьютор';
 
   useEffect(() => {
@@ -130,11 +191,12 @@ function App() {
   const nav = useMemo(
     () => [
       ...(showVehicles ? [['Техника', 'catalog']] : []),
-      ...(showParts ? [['Запчасти', 'parts']] : []),
-      ...(showService ? [['Сервис', 'service']] : []),
-      ['О компании', 'about'],
-      ['Новости', 'news'],
+      ...(showParts ? [['Запасные части', 'parts']] : []),
+      ...(showService ? [['Сервис и гарантия', 'service']] : []),
+      ...(showVehicles ? [['Финансовый сервис', 'finance']] : []),
       ['Контакты', 'contacts'],
+      ['Новости', 'news'],
+      ['О компании', 'about'],
     ],
     [showVehicles, showParts, showService],
   );
@@ -183,15 +245,21 @@ function App() {
       <div className="topbar">
         <div className="container topbar-inner">
           <span>Иркутск, ул. Ярославского, 302</span>
-          <span>Пн–Пт 8:00–20:00 · +7 (343) 000-00-00</span>
+          <span>Ежедневно 9:00–21:00 · +7 (3952) 56-70-76</span>
         </div>
       </div>
       <header className="header">
         <div className="container header-main">
           <a className="brand" href="#top" aria-label="Эланд">
-            <b>КАМАЗ</b>
+            <img
+              className="brand-logo"
+              src="/images/kamaz-center.jpg"
+              alt="КАМАЗ Центр"
+              width="770"
+              height="1350"
+            />
             <span>
-              <strong>"Эланд"</strong>
+              <strong>ООО "Эланд"</strong>
               <small>Официальный дилер ПАО «КАМАЗ»</small>
             </span>
           </a>
@@ -218,37 +286,50 @@ function App() {
       </header>
 
       <main id="top">
-        <section className="hero">
-          <div className="container hero-inner">
-            <div className="hero-copy">
-              <span className="badge">{slides[slide].tag}</span>
-              <h1>{slides[slide].title}</h1>
-              <p>{slides[slide].text}</p>
-              <div className="hero-actions">
-                <button className="button light" onClick={() => scrollTo('catalog')}>
-                  Подробнее
-                </button>
-                <div className="dots">
-                  {slides.map((_, i) => (
-                    <button
-                      key={i}
-                      className={i === slide ? 'active' : ''}
-                      onClick={() => setSlide(i)}
-                      aria-label={`Показать слайд ${i + 1}`}
-                      aria-current={i === slide}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-            <Placeholder label="Рекламный баннер" className="hero-image" />
+        <section className="hero" aria-label="Рекламные предложения" aria-roledescription="карусель">
+          <div className="hero-slides">
+            {slides.map((item, i) => (
+              <img
+                key={item.image}
+                className="hero-banner"
+                src={item.image}
+                alt={item.alt}
+                width="2200"
+                height="800"
+                hidden={i !== slide}
+                fetchPriority={i === 0 ? 'high' : 'auto'}
+              />
+            ))}
+          </div>
+          <div className="dots hero-dots" aria-label="Выбор слайда">
+            {slides.map((_, i) => (
+              <button
+                key={i}
+                className={i === slide ? 'active' : ''}
+                onClick={() => setSlide(i)}
+                aria-label={`Показать слайд ${i + 1}`}
+                aria-current={i === slide}
+              />
+            ))}
           </div>
         </section>
+
+        {showVehicles && (
+          <div className="container leasing-banner-wrap">
+            <a className="leasing-banner" href="/leasing/">
+              <img src="/images/kamaz-leasing-logo.png" alt="КАМАЗ — ЛИЗИНГ. Машина вашего бизнеса" width="401" height="116" />
+              <div>
+                <strong>Лизинг от производителя</strong>
+                <span>Программы и актуальные предложения КАМАЗ — ЛИЗИНГ</span>
+              </div>
+              <span className="button">Подобрать программу →</span>
+            </a>
+          </div>
+        )}
 
         <section className="promo">
           <div className="container card-grid compact">
             {[
-              ['Лизинг', 'КАМАЗ К5 с выгодой до 1,2 млн ₽'],
               ['Сервис', 'Сезонное ТО −15% на запчасти'],
               ['Трейд-ин', 'Обмен старой техники на новую'],
             ].map(([tag, title]) => (
@@ -310,36 +391,25 @@ function App() {
         )}
 
         {showVehicles && (
-          <section className="section blue">
+          <section id="finance" className="section blue">
             <div className="container split">
               <div>
                 <SectionTitle eyebrow="КАМАЗ-ЛИЗИНГ" title="Лизинг от производителя" />
                 <p>
-                  Специальные условия на новую технику, субсидированные ставки и оформление в
-                  дилерском центре за один визит.
+                  Программы приобретения техники КАМАЗ в лизинг от производителя.
+                  Актуальные предложения, условия финансирования и помощь в оформлении —
+                  на странице КАМАЗ — ЛИЗИНГ.
                 </p>
                 <a
                   className="button light"
-                  href="https://kamazleasing.ru/leasing-offers"
-                  target="_blank"
-                  rel="noreferrer"
+                  href="/leasing/"
                 >
-                  Все предложения
+                  Программы и предложения
                 </a>
               </div>
-              <div className="stats">
-                {[
-                  ['0%', 'Аванс'],
-                  ['60 мес', 'Срок'],
-                  ['1 день', 'Решение'],
-                  ['КАСКО', 'Страхование'],
-                ].map(([big, label]) => (
-                  <div key={label}>
-                    <b>{big}</b>
-                    <span>{label}</span>
-                  </div>
-                ))}
-              </div>
+              <a className="leasing-logo-card" href="/leasing/" aria-label="Открыть страницу КАМАЗ — ЛИЗИНГ">
+                <img src="/images/kamaz-leasing-logo.png" alt="КАМАЗ — ЛИЗИНГ. Машина вашего бизнеса" width="401" height="116" loading="lazy" />
+              </a>
             </div>
           </section>
         )}
@@ -348,85 +418,35 @@ function App() {
           <section id="parts" className="section muted">
             <div className="container">
               <SectionTitle eyebrow="Запасные части" title="Оригинальные запасные части КАМАЗ" />
+              <p className="parts-intro">
+                Подберите детали для вашей техники в каталоге КАМАЗ. Перед покупкой проверьте
+                признаки подлинности — это поможет выбрать оригинальные запчасти.
+              </p>
               <div className="parts-grid">
-                <article className="parts-card">
-                  <span className="parts-card-number" aria-hidden="true">
-                    01
-                  </span>
-                  <h3>Оригинальная упаковка и защита от контрафакта</h3>
-                  <p>
-                    Оригинальные запасные части поставляются в фирменной упаковке КАМАЗ. Перед
-                    покупкой проверяйте упаковку, маркировку и каталожный номер детали.
-                    Контрафактная продукция может не соответствовать требованиям производителя и
-                    повлиять на безопасность и ресурс автомобиля.
-                  </p>
-                  <h4>Преимущества оригинальных запасных частей</h4>
-                  <ul>
-                    <li>соответствие техническим требованиям ПАО «КАМАЗ»;</li>
-                    <li>совместимость с узлами и агрегатами автомобиля;</li>
-                    <li>гарантия производителя и подтверждённое происхождение;</li>
-                    <li>надёжность, безопасность и прогнозируемый срок службы.</li>
-                  </ul>
-                  <a
-                    className="parts-link"
-                    href="https://www.kamaz.ru/production/parts/protection-against-counterfeiting/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Защита от контрафакта на kamaz.ru →
-                  </a>
-                </article>
-                <article className="parts-card">
-                  <span className="parts-card-number" aria-hidden="true">
-                    02
-                  </span>
-                  <h3>Официальные каталоги запасных частей</h3>
-                  <p>
-                    Актуальные сведения о номенклатуре и применяемости деталей публикуются на
-                    официальных ресурсах КАМАЗ. Каталоги обновляются владельцами ресурсов по мере
-                    изменения информации.
-                  </p>
-                  <div className="parts-catalog-links">
-                    <a
-                      className="button"
-                      href="http://azkamaz.ru/parts/zch/"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Каталог «АвтоЗапчасть КАМАЗ»
-                    </a>
-                    <a
-                      className="button button-outline"
-                      href="https://shop.kamaz.ru/catalog/zapasnye_chasti/"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Интернет-магазин КАМАЗ
-                    </a>
+                <a
+                  className="parts-card"
+                  href="http://azkamaz.ru/parts/zch/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <div>
+                    <h3>Каталог запчастей</h3>
+                    <p>Номера деталей и их применяемость для техники КАМАЗ.</p>
                   </div>
-                </article>
-              </div>
-              <div className="official-resources">
-                <h3>Официальные каталоги и технические ресурсы</h3>
-                <div className="official-resource-grid">
-                  {[
-                    [
-                      'Двигатели и силовые агрегаты',
-                      'https://www.kamaz.ru/production/related/engines/',
-                    ],
-                    [
-                      'Конфигуратор серийной и специальной техники',
-                      'https://kamaz.ru/production/serial/configurator/',
-                    ],
-                    ['Прицепная техника', 'https://kamaz.ru/production/trailers/'],
-                    ['Спецавтотехника производства «ТЗА»', 'https://kamaz.ru/production/special/'],
-                  ].map(([label, href]) => (
-                    <a href={href} target="_blank" rel="noopener noreferrer" key={href}>
-                      <span>{label}</span>
-                      <b aria-hidden="true">↗</b>
-                    </a>
-                  ))}
-                </div>
+                  <span className="parts-arrow" aria-hidden="true">↗</span>
+                </a>
+                <a
+                  className="parts-card"
+                  href="https://www.kamaz.ru/production/parts/protection-against-counterfeiting/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <div>
+                    <h3>Защита от контрафакта</h3>
+                    <p>Как проверить упаковку и маркировку оригинальных запчастей.</p>
+                  </div>
+                  <span className="parts-arrow" aria-hidden="true">↗</span>
+                </a>
               </div>
             </div>
           </section>
@@ -435,7 +455,8 @@ function App() {
         {showService && (
           <section id="service" className="section">
             <div className="container">
-              <SectionTitle eyebrow="Сервис" title="Сертифицированный сервисный центр" />
+              <SectionTitle eyebrow="Сервис и гарантия" title="Сертифицированный сервисный центр" />
+              <p>Гарантийное и постгарантийное обслуживание техники КАМАЗ.</p>
               <div className="service-list">
                 {[
                   ['Техническое обслуживание ТО-1', 'от 8 700 ₽'],
@@ -473,7 +494,7 @@ function App() {
                 </b>
               </div>
             </div>
-            <Placeholder label="Свидетельство официального дилера" />
+            <CertificateSlider />
           </div>
         </section>
 
@@ -630,6 +651,9 @@ function App() {
         <section id="contacts" className="section">
           <div className="container">
             <SectionTitle eyebrow="Контакты" title="Дилерские центры" />
+            <p>
+              <a href="#feedback" onClick={() => goFeedback(0)}>Обратная связь — задать вопрос</a>
+            </p>
             <div className="contacts">
               <div className="branch-list">
                 {branches.map((item, i) => (

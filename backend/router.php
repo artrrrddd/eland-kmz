@@ -12,6 +12,11 @@ if (preg_match('~(?:^|/)\.|\\\\~', $path)) {
 }
 $root = realpath($_SERVER['DOCUMENT_ROOT']);
 $file = realpath($root . $path);
+if ($file && str_starts_with($file, $root . DIRECTORY_SEPARATOR) && is_dir($file) && is_file($file . '/index.html')) {
+    header('Content-Type: text/html; charset=utf-8');
+    readfile($file . '/index.html');
+    exit;
+}
 if ($file && str_starts_with($file, $root . DIRECTORY_SEPARATOR) && is_file($file)) return false;
 if (is_file($root . '/index.html')) {
     header('Content-Type: text/html; charset=utf-8');

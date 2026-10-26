@@ -58,6 +58,7 @@ a {
 }
 .header-main {
   min-height: 76px;
+  padding-block: 10px;
   display: flex;
   align-items: center;
   gap: 24px;
@@ -68,10 +69,12 @@ a {
   gap: 18px;
   margin-right: auto;
 }
-.brand > b {
-  font-size: 24px;
-  color: var(--blue);
-  letter-spacing: -1px;
+.brand-logo {
+  display: block;
+  width: auto;
+  height: 88px;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 .brand span {
   display: flex;
@@ -119,6 +122,7 @@ a {
 }
 .nav-inner {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
 }
 .nav a {
@@ -137,19 +141,17 @@ a {
   color: #fff;
   overflow: hidden;
 }
-.hero-inner {
-  min-height: 530px;
-  display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
-  align-items: stretch;
+.hero-banner {
+  display: block;
+  width: 100%;
+  height: auto;
 }
-.hero-copy {
-  padding: 72px 0;
-  display: flex;
-  flex-direction: column;
+.hero-banner[hidden] {
+  display: none;
+}
+.hero-dots {
   justify-content: center;
-  align-items: flex-start;
-  z-index: 1;
+  padding: 14px 18px;
 }
 .badge {
   background: var(--red);
@@ -221,6 +223,47 @@ a {
 .promo {
   background: var(--muted);
   padding: 32px 0;
+}
+.leasing-banner-wrap {
+  padding-block: 28px;
+}
+.leasing-banner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 24px;
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--muted);
+}
+.leasing-banner img {
+  width: min(280px, 100%);
+  height: auto;
+}
+.leasing-banner > div {
+  flex: 1 1 240px;
+  display: grid;
+  gap: 8px;
+}
+.leasing-banner strong {
+  color: var(--dark);
+  font-size: 24px;
+}
+.leasing-banner:hover,
+.leasing-banner:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 3px;
+}
+.leasing-logo-card {
+  padding: 28px;
+  background: #fff;
+  border-radius: 6px;
+}
+.leasing-logo-card img {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 .section {
   padding: 84px 0;
@@ -384,6 +427,88 @@ dt {
   gap: 38px;
   margin-top: 30px;
 }
+.certificate-slider {
+  min-width: 0;
+  padding: 16px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.certificate-slide {
+  display: block;
+}
+.certificate-slide[hidden] {
+  display: none;
+}
+.certificate-slide img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+.certificate-caption {
+  display: grid;
+  gap: 6px;
+  margin-top: 16px;
+  min-height: 64px;
+}
+.certificate-caption strong {
+  font-size: 15px;
+  color: var(--dark);
+}
+.certificate-caption span {
+  font-size: 12px;
+  color: #4a5568;
+}
+.certificate-controls,
+.certificate-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.certificate-controls {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--dark);
+}
+.certificate-controls button {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #fff;
+  color: var(--blue);
+  cursor: pointer;
+  font-size: 20px;
+}
+.certificate-controls button:hover {
+  background: var(--muted);
+}
+.certificate-dots {
+  gap: 0;
+}
+.certificate-dots button {
+  width: 32px;
+  border: 0;
+  background: transparent;
+  display: grid;
+  place-items: center;
+}
+.certificate-dots button::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--line);
+}
+.certificate-dots button[aria-current]::after {
+  background: var(--blue);
+}
+.certificate-slider :focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 3px;
+}
 .facts b {
   font-size: 27px;
   color: var(--blue);
@@ -409,102 +534,46 @@ dt {
 .service-list div:last-child {
   border: 0;
 }
+.parts-intro {
+  max-width: 720px;
+  margin: 0 0 24px;
+  color: #4a5568;
+  line-height: 1.65;
+}
 .parts-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
 }
 .parts-card {
-  position: relative;
-  padding: 30px;
-  overflow: hidden;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px;
   background: #fff;
   border: 1px solid var(--line);
   border-radius: 6px;
 }
-.parts-card-number {
-  position: absolute;
-  top: 14px;
-  right: 20px;
-  color: #e5eaf1;
-  font-size: 54px;
-  font-weight: 800;
-  line-height: 1;
+.parts-card:hover,
+.parts-card:focus-visible {
+  border-color: var(--blue);
 }
-.parts-card h3,
-.official-resources h3 {
-  position: relative;
-  margin: 0 0 16px;
+.parts-card h3 {
+  margin: 0 0 8px;
   color: var(--dark);
   font-size: 22px;
 }
-.parts-card h4 {
-  margin: 22px 0 10px;
-  color: var(--dark);
-}
 .parts-card p {
-  position: relative;
   margin: 0;
   color: #4a5568;
   font-size: 15px;
   line-height: 1.65;
 }
-.parts-card ul {
-  margin: 0 0 22px;
-  padding-left: 20px;
-  color: #4a5568;
-  line-height: 1.65;
-}
-.parts-link {
+.parts-arrow {
   color: var(--blue);
-  font-weight: 700;
-}
-.parts-link:hover {
-  color: var(--dark);
-}
-.parts-catalog-links {
-  display: flex;
-  align-items: flex-start;
-  flex-direction: column;
-  gap: 12px;
-  margin-top: 24px;
-}
-.button-outline {
-  color: var(--blue);
-  background: transparent;
-  border: 1px solid var(--blue);
-}
-.button-outline:hover {
-  color: #fff;
-}
-.official-resources {
-  margin-top: 34px;
-}
-.official-resource-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-}
-.official-resource-grid a {
-  display: flex;
-  justify-content: space-between;
-  gap: 14px;
-  min-height: 92px;
-  padding: 18px;
-  background: #fff;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  color: var(--dark);
-  font-size: 14px;
-  font-weight: 700;
-}
-.official-resource-grid a:hover {
-  border-color: var(--blue);
-  transform: translateY(-2px);
-}
-.official-resource-grid b {
-  color: var(--blue);
-  font-size: 18px;
+  font-size: 24px;
+  line-height: 1;
 }
 .news-card {
   padding: 24px;
@@ -647,9 +716,6 @@ dt {
   .card-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .official-resource-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
   .contacts {
     grid-template-columns: 1fr;
   }
@@ -667,6 +733,16 @@ dt {
   }
   .header-main {
     min-height: 68px;
+    gap: 12px;
+  }
+  .brand {
+    gap: 12px;
+  }
+  .brand-logo {
+    height: 64px;
+  }
+  .brand strong {
+    font-size: 16px;
   }
   .brand span small {
     display: none;
@@ -702,8 +778,7 @@ dt {
   }
   .card-grid,
   .card-grid.compact,
-  .parts-grid,
-  .official-resource-grid {
+  .parts-grid {
     grid-template-columns: 1fr;
   }
   .section {
