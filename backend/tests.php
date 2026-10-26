@@ -6,12 +6,10 @@ require __DIR__ . '/news.php';
 function check(bool $condition, string $message): void {
     if (!$condition) throw new RuntimeException($message);
 }
-$base = ['type' => 'callback', 'name' => 'Иван', 'phone' => '+7 (999) 123-45-67', 'consent' => true];
+$base = ['name' => 'Иван', 'phone' => '+7 (999) 123-45-67', 'consent' => true];
 check(validateApplication($base)[1] === [], 'Valid Cyrillic application');
-foreach (['question', 'callback', 'test_drive', 'service', 'commercial_offer'] as $type) {
-    check(validateApplication(array_replace($base, ['type' => $type, 'model' => 'КАМАЗ', 'vehicle' => 'VIN']))[1] === [], $type);
-}
-foreach ([['consent' => 'true'], ['website' => 'spam'], ['phone' => '123'], ['name' => []], ['branchId' => []], ['branchId' => 1.5], ['branchId' => 3], ['type' => 'service'], ['type' => 'test_drive'], ['type' => 'commercial_offer']] as $invalid) {
+check(validateApplication($base)[0] === validateApplication(array_replace($base, ['type' => 'service', 'model' => 'KAMAZ', 'vehicle' => 'VIN']))[0], 'Legacy request fields do not affect callback');
+foreach ([['consent' => 'true'], ['website' => 'spam'], ['phone' => '123'], ['name' => []], ['branchId' => []], ['branchId' => 1.5], ['branchId' => 3]] as $invalid) {
     check(validateApplication(array_replace($base, $invalid))[1] !== [], 'Invalid form rejected: ' . json_encode($invalid));
 }
 check(validateApplication(array_replace($base, ['name' => str_repeat('Я', 100)]))[1] === [], 'Unicode length');

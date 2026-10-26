@@ -124,6 +124,45 @@ const branches = [
   ],
 ];
 
+// Latitude, longitude from https://scaneland.ru/contacts/.
+const branchCoordinates = {
+  'Иркутск': [52.347976583686005, 104.14555721827683],
+  'Братск': [56.274001, 101.858074],
+  'Усть-Илимск': [57.98234656658093, 102.77745549999989],
+};
+
+function BranchMap({ branch }) {
+  const city = branch[0].split(':')[0];
+  const address = `${city}, ${branch[1]}`;
+  const [latitude, longitude] = branchCoordinates[city];
+  // The map uses longitude first; routing uses latitude first.
+  const point = `${longitude},${latitude}`;
+  const mapQuery = new URLSearchParams({
+    ll: point,
+    pt: `${point},pm2rdm`,
+    z: '16',
+    lang: 'ru_RU',
+  });
+  const routeQuery = new URLSearchParams({ rtext: `~${latitude},${longitude}`, rtt: 'auto' });
+
+  return (
+    <div className="branch-map">
+      <iframe
+        key={address}
+        src={`https://yandex.ru/map-widget/v1/?${mapQuery}`}
+        title={`Карта проезда: ${branch[0]}`}
+        width="100%"
+        height="320"
+        loading="lazy"
+        allowFullScreen
+      />
+      <a href={`https://yandex.ru/maps/?${routeQuery}`} target="_blank" rel="noopener noreferrer">
+        Построить маршрут в Яндекс Картах ↗
+      </a>
+    </div>
+  );
+}
+
 const scrollTo = (id) =>
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 const newsDate = new Intl.DateTimeFormat('ru-RU', {
@@ -154,12 +193,10 @@ function App() {
   const dealerStatus = '2S автотехника';
   const [slide, setSlide] = useState(0);
   const [tab, setTab] = useState(0);
-  const [formTab, setFormTab] = useState(0);
   const [branch, setBranch] = useState(0);
   const [sent, setSent] = useState(false);
   const [submitState, setSubmitState] = useState('idle');
   const [submitError, setSubmitError] = useState('');
-  const [selectedModel, setSelectedModel] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const [news, setNews] = useState([]);
   const [newsState, setNewsState] = useState('loading');
@@ -201,9 +238,7 @@ function App() {
     [showVehicles, showParts, showService],
   );
 
-  const goFeedback = (index, model = '') => {
-    setFormTab(index);
-    setSelectedModel(model);
+  const goFeedback = () => {
     setSent(false);
     setSubmitState('idle');
     setSubmitError('');
@@ -215,11 +250,8 @@ function App() {
     setSubmitError('');
     const form = event.currentTarget;
     const values = Object.fromEntries(new FormData(form));
-    const types = ['question', 'online-consultation', 'test_drive', 'service'];
     const payload = {
       ...values,
-      type: selectedModel && formTab === 2 ? 'commercial_offer' : types[formTab],
-      model: values.model || selectedModel,
       branchId: branch,
       consent: values.consent === 'on',
     };
@@ -263,7 +295,7 @@ function App() {
               <small>Официальный дилер ПАО «КАМАЗ»</small>
             </span>
           </a>
-          <button className="button" onClick={() => goFeedback(1)}>
+          <button className="button" onClick={() => goFeedback()}>
             Обратный звонок
           </button>
           <button
@@ -378,8 +410,8 @@ function App() {
                       </dl>
                       <footer>
                         <strong>{item[4]}</strong>
-                        <button className="link-button" onClick={() => goFeedback(2, item[0])}>
-                          Запросить КП
+                        <button className="link-button" onClick={() => goFeedback()}>
+                          Заказать звонок
                         </button>
                       </footer>
                     </div>
@@ -541,40 +573,17 @@ function App() {
             <div>
               <SectionTitle
                 eyebrow="Обратная связь"
-                title="Ответим в течение 15 минут в рабочее время"
+                title="Обратный звонок"
               />
               <p>
-                Задайте вопрос, получите онлайн-консультацию, запросите тест-драйв или запишитесь на
-                сервис.
+                Оставьте имя и телефон — мы перезвоним вам в рабочее время.
               </p>
             </div>
             <div className="form-card">
-              <div className="form-tabs">
-                {[
-                  'Вопрос-ответ',
-                  'Онлайн-консультация',
-                  'Запрос на тест-драйв',
-                  'Запись на сервис',
-                ].map((label, i) => (
-                  <button
-                    type="button"
-                    className={formTab === i ? 'active' : ''}
-                    onClick={() => {
-                      setFormTab(i);
-                      setSelectedModel('');
-                      setSent(false);
-                      setSubmitError('');
-                    }}
-                    key={label}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
               {sent ? (
                 <div className="success">
                   <h3>Заявка отправлена</h3>
-                  <p>Мы сохранили заявку и свяжемся с вами в рабочее время.</p>
+                  <p>Мы перезвоним вам в рабочее время.</p>
                   <button
                     className="button"
                     onClick={() => {
@@ -601,23 +610,6 @@ function App() {
                       placeholder="+7 (___) ___-__-__"
                     />
                   </label>
-                  {formTab === 2 && (
-                    <label>
-                      Модель
-                      <select name="model" defaultValue={selectedModel || 'КАМАЗ-54901'}>
-                        <option>КАМАЗ-54901</option>
-                        <option>КАМАЗ-65952</option>
-                        <option>КАМАЗ-43118</option>
-                        <option>КАМАЗ-65115</option>
-                      </select>
-                    </label>
-                  )}
-                  {formTab === 3 && (
-                    <label>
-                      VIN или госномер
-                      <input name="vehicle" maxLength="100" required />
-                    </label>
-                  )}
                   <label>
                     Комментарий
                     <textarea name="message" rows="3" maxLength="2000" />
@@ -634,7 +626,7 @@ function App() {
                     aria-hidden="true"
                   />
                   <button className="button" type="submit" disabled={submitState === 'submitting'}>
-                    {submitState === 'submitting' ? 'Отправляем…' : 'Отправить заявку'}
+                    {submitState === 'submitting' ? 'Отправляем…' : 'Заказать звонок'}
                   </button>
                   {submitError && (
                     <p className="form-error" role="alert">
@@ -652,7 +644,7 @@ function App() {
           <div className="container">
             <SectionTitle eyebrow="Контакты" title="Дилерские центры" />
             <p>
-              <a href="#feedback" onClick={() => goFeedback(0)}>Обратная связь — задать вопрос</a>
+              <a href="#feedback" onClick={() => goFeedback()}>Заказать обратный звонок</a>
             </p>
             <div className="contacts">
               <div className="branch-list">
@@ -668,7 +660,7 @@ function App() {
                 ))}
               </div>
               <div className="contact-card">
-                <Placeholder label="Схема проезда" />
+                <BranchMap branch={branches[branch]} />
                 <h3>{branches[branch][0]}</h3>
                 <p>{branches[branch][1]}</p>
                 <a href={`tel:${branches[branch][2].replace(/[^+\d]/g, '')}`}>

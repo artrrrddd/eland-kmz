@@ -5,7 +5,7 @@ function validateApplication(array $input): array
 {
     $data = [];
     $errors = [];
-    foreach (['type' => 30, 'name' => 100, 'phone' => 30, 'model' => 100, 'vehicle' => 100, 'message' => 2000, 'website' => 0] as $key => $max) {
+    foreach (['name' => 100, 'phone' => 30, 'message' => 2000, 'website' => 0] as $key => $max) {
         $value = array_key_exists($key, $input) ? $input[$key] : '';
         if (!is_string($value)) {
             $errors[$key] = ['Ожидается строка.'];
@@ -14,7 +14,6 @@ function validateApplication(array $input): array
         $data[$key] = $key === 'website' ? $value : trim($value);
         if (mb_strlen($data[$key], 'UTF-8') > $max) $errors[$key] = ['Слишком длинное значение.'];
     }
-    if (!in_array($data['type'], ['question', 'callback', 'test_drive', 'service', 'commercial_offer'], true)) $errors['type'] = ['Некорректный тип заявки.'];
     if (mb_strlen($data['name'], 'UTF-8') < 2) $errors['name'] = ['Укажите имя (от 2 символов).'];
     if (strlen(preg_replace('/\D/', '', $data['phone'])) < 10) $errors['phone'] = ['Укажите корректный номер телефона.'];
     $branch = $input['branchId'] ?? 0;
@@ -23,8 +22,6 @@ function validateApplication(array $input): array
     }
     $data['branchId'] = isset($errors['branchId']) ? 0 : (int) $branch;
     if (($input['consent'] ?? false) !== true) $errors['consent'] = ['Необходимо согласие.'];
-    if ($data['type'] === 'service' && $data['vehicle'] === '') $errors['vehicle'] = ['Укажите VIN или госномер.'];
-    if (in_array($data['type'], ['test_drive', 'commercial_offer'], true) && $data['model'] === '') $errors['model'] = ['Выберите модель.'];
     return [$data, $errors];
 }
 

@@ -36,9 +36,9 @@ try {
         $stmt = $pdo->prepare('INSERT INTO applications
             (id, type, name, phone, `phoneNormalized`, model, vehicle, message, `branchId`, status, `managerId`, consent, `createdAt`, `updatedAt`, `ipHash`)
             VALUES (:id, :type, :name, :phone, :normalized, :model, :vehicle, :message, :branch, \'new\', NULL, TRUE, NOW(3), NOW(3), :hash)');
-        $stmt->execute(['id' => $id, 'type' => $data['type'], 'name' => $data['name'], 'phone' => $data['phone'],
-            'normalized' => preg_replace('/\D/', '', $data['phone']), 'model' => $data['model'] ?: null,
-            'vehicle' => $data['vehicle'] ?: null, 'message' => $data['message'] ?: null, 'branch' => $data['branchId'], 'hash' => $hash]);
+        $stmt->execute(['id' => $id, 'type' => 'callback', 'name' => $data['name'], 'phone' => $data['phone'],
+            'normalized' => preg_replace('/\D/', '', $data['phone']), 'model' => null,
+            'vehicle' => null, 'message' => $data['message'] ?: null, 'branch' => $data['branchId'], 'hash' => $hash]);
         jsonResponse(['ok' => true, 'applicationId' => $id], 201);
     }
     requireAdmin();
